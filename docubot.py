@@ -64,7 +64,13 @@ class DocuBot:
         ignore punctuation if needed.
         """
         index = {}
-        # TODO: implement simple indexing
+        for filename, text in documents:
+            tokens = text.lower().split()
+            for token in tokens:
+                if token not in index:
+                    index[token] = []
+                if filename not in index[token]:
+                    index[token].append(filename)
         return index
 
     # -----------------------------------------------------------
@@ -81,19 +87,43 @@ class DocuBot:
         - Count how many appear in the text
         - Return the count as the score
         """
-        # TODO: implement scoring
-        return 0
+        query_words = query.lower().split()
+        text_lower = text.lower()
+        score = 0
+        for word in query_words:
+            if word in text_lower:
+                score += 1
+        return score
 
-    def retrieve(self, query, top_k=3):
+    def chunk_document(self, text):
         """
-        TODO (Phase 1):
-        Use the index and scoring function to select top_k relevant document snippets.
+        Split a document into smaller sections so retrieval can return
+        focused snippets instead of whole files.
 
-        Return a list of (filename, text) sorted by score descending.
+        Strategy: paragraphs (blocks separated by one or more blank lines).
+        Blank blocks are dropped and surrounding whitespace is trimmed.
+        """
+        raw_chunks = text.split("\n\n")
+        chunks = [chunk.strip() for chunk in raw_chunks if chunk.strip()]
+        return chunks
+
+    def retrieve(self, query, top_k=3, min_score=1):
+        """
+        Score every paragraph-sized chunk across all documents and return the
+        top_k most relevant as (filename, chunk_text), sorted by score desc.
+
+        Guardrail: chunks scoring below min_score carry no meaningful evidence,
+        so they are discarded. If nothing clears the bar, an empty list is
+        returned and the answering modes refuse with "I do not know".
         """
         results = []
-        # TODO: implement retrieval logic
-        return results[:top_k]
+        for filename, text in self.documents:
+            for chunk in self.chunk_document(text):
+                score = self.score_document(query, chunk)
+                if score >= min_score:
+                    results.append((score, filename, chunk))
+        results.sort(key=lambda x: x[0], reverse=True)
+        return [(filename, chunk) for score, filename, chunk in results[:top_k]]
 
     # -----------------------------------------------------------
     # Answering Modes
