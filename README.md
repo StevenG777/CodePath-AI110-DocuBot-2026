@@ -16,6 +16,11 @@ The docs folder contains realistic developer documents (API reference, authentic
 
 ---
 
+## Demo
+![demo image](./demo.png)
+
+---
+
 ## Setup
 
 ### 1. Install Python dependencies
